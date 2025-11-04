@@ -1,0 +1,605 @@
+<!-- Save as mlbb-roamer-v6.html and open in a browser -->
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MLBB Draft — v6 (Gold Roamer Tab Edition)</title>
+  
+<link rel="manifest" href="manifest.json">
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('service-worker.js')
+      .then(() => console.log('✅ Service Worker registered'))
+      .catch(err => console.log('❌ Service Worker failed', err));
+  }
+</script>
+
+<style>
+  :root{
+    --bg:#061025; --card:#0b1220; --muted:#9aa6bb; --accent:#66e0b3;
+    --danger:#ff6b6b; --good:#66e0b3; --bad:#ff7a7a;
+    --gold:#ffd700;
+    font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;
+.banned { color:#ff5555; font-weight:700; }
+  }
+  body{background:linear-gradient(180deg,#04101a 0%, #071028 100%); color:#e6eef8; margin:0; padding:18px;}
+  .wrap{max-width:1200px;margin:0 auto;}
+  h1{margin:0 0 6px;font-size:20px}
+  .lead{color:var(--muted); margin:0 0 12px; font-size:13px}
+  .card{background:var(--card); padding:12px; border-radius:10px; box-shadow: 0 8px 28px rgba(0,0,0,0.55); margin-bottom:12px}
+  .tabs{display:flex; gap:8px; margin-bottom:8px; flex-wrap:wrap}
+  .tab{padding:8px 12px; border-radius:8px; cursor:pointer; border:1px solid rgba(255,255,255,0.03); background:transparent; color:var(--muted)}
+  .tab.active{background:linear-gradient(90deg, rgba(102,224,179,0.06), transparent); color:var(--accent); border-color:rgba(102,224,179,0.12)}
+  .tab.roamer{ color:var(--gold); border-color: rgba(255,215,0,0.12); }
+  .tab.roamer.active{ background: linear-gradient(90deg, rgba(255,215,0,0.06), transparent); color:var(--gold); border-color: rgba(255,215,0,0.22); box-shadow: 0 6px 18px rgba(255,215,0,0.06); }
+  .controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  input[type="text"], input[type="number"], select, textarea {padding:8px;border-radius:8px;border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit}
+  button{background:var(--accent); color:#022; border:0; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:700}
+  button.ghost{background:transparent; border:1px solid rgba(255,255,255,0.04); color:var(--muted)}
+  table{width:100%; border-collapse:collapse; margin-top:8px}
+  th,td{padding:8px 10px; text-align:left; font-size:13px; vertical-align:top}
+  th{color:var(--muted); font-size:12px; text-transform:uppercase}
+  tr.recommended{outline:3px solid rgba(102,224,179,0.08); background:linear-gradient(90deg, rgba(102,224,179,0.02), transparent)}
+  tr.removed{opacity:0.45}
+  .muted{color:var(--muted)}
+  .small{font-size:12px;color:var(--muted)}
+  .tally{background:rgba(255,255,255,0.015); border-radius:8px; padding:8px; margin-top:6px}
+  .tally-row{display:flex; justify-content:space-between; gap:10px; padding:2px 0; font-size:13px}
+  .tally-row .k{color:var(--muted); width:60%}
+  .tally-row .v{width:40%; text-align:right; font-weight:700}
+  .total-hero{margin-top:8px; padding:8px; border-radius:8px; background:linear-gradient(90deg, rgba(102,224,179,0.04), transparent); font-weight:800; display:flex; justify-content:space-between}
+  .score-neg{color:var(--bad)}
+  .score-pos{color:var(--good)}
+  .grid{display:grid; grid-template-columns: 1fr 420px; gap:12px}
+  .uncompat{color:#ffb3b3; font-weight:700}
+  .compat{color:var(--accent); font-weight:700}
+  .hint{font-size:12px;color:var(--muted); margin-top:6px}
+  .small-btn{padding:6px 8px; font-size:13px; border-radius:6px}
+  .detail-line{font-size:12px; color:var(--muted);}
+  .reverse-tag{font-size:12px; color:#ffd88f; margin-left:6px}
+  .rec-box{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02); margin-top:8px;}
+  .rec-box.glow{ box-shadow: 0 6px 30px rgba(255,215,0,0.12); border:1px solid rgba(255,215,0,0.12); }
+  @media(max-width:980px){ .grid{grid-template-columns: 1fr} .tally{margin-bottom:10px} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>MLBB Draft — v6</h1>
+  <p class="lead">Gold Roamer tab added. Live two-way scoring and inline reverse tags remain. Recommended pick will glow gold when Roamer tab is active.</p>
+
+  <div class="card">
+    <div class="tabs" id="roleTabs"></div>
+    <div class="controls" style="margin-top:6px; align-items:center;">
+      <div style="min-width:300px">
+        <label class="small">Ally picks (live)</label><br/>
+        <input id="allyPicks" type="text" placeholder="e.g. Tigreal, Angela, Brody" style="width:100%">
+      </div>
+      <div style="min-width:300px">
+        <label class="small">Enemy picks (live)</label><br/>
+        <input id="enemyPicks" type="text" placeholder="e.g. Gatot, Lolita, Hilda" style="width:100%">
+      </div>
+  <div style="min-width:260px">
+  <label class="small">Banned heroes</label><br/>
+  <input id="bannedPicks" type="text" placeholder="e.g. Valentina, Franco" style="width:100%">
+</div>
+      <div style="margin-left:8px">
+        <label class="small">Active map zones</label><br/>
+        <label><input type="checkbox" id="zone_grass"> Dangerous Grass</label>
+        <label style="margin-left:8px"><input type="checkbox" id="zone_river"> Expanding Rivers</label>
+        <label style="margin-left:8px"><input type="checkbox" id="zone_walls"> Broken Walls</label>
+        <label style="margin-left:8px"><input type="checkbox" id="zone_cloud"> Flying Cloud</label>
+      </div>
+    </div>
+    <div class="hint">Tip: compatible string example: <code>Angela, Tigreal, -Franco</code></div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex; gap:8px; align-items:center; margin-bottom:8px">
+      <input type="text" id="filter" placeholder="Filter by name" style="width:260px">
+      <div style="flex:1"></div>
+      <label class="small" style="margin-right:10px"><input type="checkbox" id="debugToggle"> Show detail lines</label>
+      <button id="saveLocal" class="ghost">Save</button>
+      <button id="loadLocal" class="ghost">Load</button>
+      <button id="exportCsv" class="ghost">Export CSV</button>
+      <button id="exportBackup" class="ghost">⬇️ Export Backup</button>
+<input type="file" id="importBackup" accept=".json" style="display:none">
+<label for="importBackup" class="ghost" style="cursor:pointer;">⬆️ Import Backup</label>
+    </div>
+
+    <div class="grid">
+      <div style="overflow:auto; max-height:64vh;">
+        <table>
+          <thead>
+            <tr>
+              <th>Hero</th><th>Role</th><th>Group</th><th>Maps</th><th>Countered By</th><th>Compatible</th><th>Counters</th><th>Comfort</th><th>Marks</th><th>Total</th><th></th>
+            </tr>
+          </thead>
+          <tbody id="heroesTable"></tbody>
+        </table>
+      </div>
+
+      <div>
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <h3 style="margin:0">Tallies — role view</h3>
+              <div class="small muted">Tally list shows heroes for the active tab (or all for 'All').</div>
+            </div>
+            <div><button id="clearInputs" class="ghost">Clear Ally/Enemy</button></div>
+          </div>
+
+          <div id="tallyList" style="margin-top:12px; max-height:58vh; overflow:auto;"></div>
+          <div id="recommendation" style="margin-top:12px"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* v6 - Gold Roamer Tab Edition
+   - Adds 'Roamer' tab at end with gold styling
+   - Recommendation box glows gold when Roamer tab active
+   - Remainder of v5 behavior preserved
+*/
+
+// ---------- Prefill sample (extend from your PDF as needed) ----------
+let heroes = [
+  {name:'Chip', role:'Tank', group:'Meta', counters:['Alucard'], compatible:['Tigreal'], countered_by:['Gatot'], maps:['Expanding Rivers'], comfort:3},
+  {name:'Alucard', role:'Assassin', group:'Unknown', counters:['Kalea'], compatible:[], countered_by:['Gatot','Chip'], maps:[], comfort:2},
+  {name:'Gatot', role:'Tank', group:'Meta', counters:['Alucard'], compatible:[], countered_by:[], maps:['Broken Walls','Flying Cloud'], comfort:2},
+  {name:'Kalea', role:'Support', group:'Playable', counters:[], compatible:[], countered_by:['Alucard'], maps:[], comfort:2},
+  {name:'Franco', role:'Tank', group:'Situational', counters:[], compatible:[], countered_by:[], maps:[], comfort:2},
+  {name:'Angela', role:'Support', group:'Playable', counters:[], compatible:[], countered_by:[], maps:[], comfort:3},
+  {name:'Tigreal', role:'Tank', group:'Playable', counters:[], compatible:[], countered_by:[], maps:[], comfort:2},
+  {name:'Chou', role:'Fighter', group:'Situational', counters:[], compatible:[], countered_by:[], maps:[], comfort:2},
+  {name:'Badang', role:'Fighter', group:'Situational', counters:[], compatible:[], countered_by:[], maps:[], comfort:2},
+  {name:'Granger', role:'Marksman', group:'Meta', counters:[], compatible:[], countered_by:[], maps:[], comfort:2},
+  {name:'Cyclops', role:'Mage', group:'Unknown', counters:[], compatible:[], countered_by:[], maps:[], comfort:2}
+];
+
+// tabs
+const ROLE_TABS = ['All','Tank','Assassin','Fighter','Mage','Marksman','Support','Roamer'];
+let activeTab = 'All';
+const extraRoamers = ['chou','badang','khaleed','kaja'];
+
+// state lists
+let allyList = [], enemyList = [];
+const debugToggle = document.getElementById('debugToggle');
+
+// helpers
+function norm(s){ return String(s||'').trim().replace(/\s+/g,' ').toLowerCase(); }
+function parseList(s){ return String(s||'').split(',').map(x=>x.trim()).filter(Boolean); }
+function parseCompatField(text){
+  if(!text) return {compat:[], uncompat:[]};
+  if(Array.isArray(text)){
+    const compat=[], uncompat=[];
+    text.forEach(it=>{ if(!it) return; const st=String(it).trim(); if(st.startsWith('-')) uncompat.push(st.slice(1).trim()); else compat.push(st); });
+    return {compat, uncompat};
+  }
+  const parts = String(text).split(',').map(p=>p.trim()).filter(Boolean);
+  const compat=[], uncompat=[];
+  parts.forEach(p=> p.startsWith('-') ? uncompat.push(p.slice(1).trim()) : compat.push(p));
+  return {compat, uncompat};
+}
+function isRoamerHero(h){ const r = norm(h.role); if(r==='tank' || r==='support' || r==='roamer') return true; if(extraRoamers.includes(norm(h.name))) return true; return false; }
+
+// compute totals (forward + reverse), produce details
+function computeTotals(){
+  const zones = {
+    grass: !!document.getElementById('zone_grass').checked,
+    river: !!document.getElementById('zone_river').checked,
+    walls: !!document.getElementById('zone_walls').checked,
+    cloud: !!document.getElementById('zone_cloud').checked
+  };
+
+  // quick ally role counts for RoleFit auto logic
+  const allyRoles = allyList.map(a => { const m = heroes.find(h=> norm(h.name) === norm(a)); return m ? norm(m.role) : null; }).filter(Boolean);
+  const hasSupportAlly = allyRoles.includes('support');
+  const tankCountAlly = allyRoles.filter(r=> r==='tank').length;
+
+  // name lookup
+  const nameMap = {};
+  heroes.forEach(h=> nameMap[norm(h.name)] = h);
+
+  // reset details
+  heroes.forEach(h=>{
+    h.marks = 0; h.disabled = false; h.total = 0;
+// NEW: auto-disable if hero is in banned list
+if (bannedList.find(b => norm(b) === norm(h.name))) {
+  h.disabled = true;
+  h.total = 0;
+  h._details.total = 0;
+  h._details.forward.push({label:'BANNED', pts:0});
+}
+
+    h._details = {forward:[], reverse:[], sums:{map:0, compat:0, uncompat:0, counters:0, marks:0, comfort:0, roleFit:0}, total:0};
+  });
+
+  // FORWARD pass
+  heroes.forEach(h=>{
+    h.counters = h.counters || []; h.countered_by = h.countered_by || []; h.maps = h.maps || []; h.compatible = h.compatible || [];
+
+    // forward marks from enemy picks matching this hero's countered_by
+    const cbLower = (h.countered_by||[]).map(x=>norm(x));
+    let marks = 0;
+    cbLower.forEach(c => { if(enemyList.find(e => norm(e) === c)) marks++; });
+    h.marks = marks;
+    if(marks >= 2) h.disabled = true;
+    if(h.disabled) return;
+
+    // map synergy
+    const heroMaps = (h.maps||[]).map(x=>norm(x));
+    const mapMatch = (zones.grass && heroMaps.some(m=>m.includes('grass'))) || (zones.river && heroMaps.some(m=>m.includes('river'))) || (zones.walls && heroMaps.some(m=>m.includes('wall'))) || (zones.cloud && heroMaps.some(m=>m.includes('cloud')));
+    if(mapMatch){ h._details.sums.map += 1; h._details.forward.push({label:'Map', pts:1}); }
+
+    // forward compat/uncompat
+    const pc = parseCompatField(h.compatible);
+    let compatCount=0, uncompatCount=0;
+    pc.compat.forEach(c => { if(allyList.find(a=> norm(a) === norm(c))) compatCount++; });
+    pc.uncompat.forEach(c => { if(allyList.find(a=> norm(a) === norm(c))) uncompatCount++; });
+    if(compatCount){ h._details.sums.compat += compatCount; h._details.forward.push({label:'Compat', pts:compatCount}); }
+    if(uncompatCount){ h._details.sums.uncompat += uncompatCount * -2; h._details.forward.push({label:'Uncompat', pts:uncompatCount * -2}); }
+
+    // forward counters: +2 per enemy matched
+    const countersLower = (h.counters||[]).map(x=>norm(x));
+    let countersCount = 0;
+    countersLower.forEach(c => { if(enemyList.find(e=> norm(e) === c)) countersCount++; });
+    if(countersCount){ h._details.sums.counters += countersCount * 2; h._details.forward.push({label:'Counters', pts:countersCount * 2}); }
+
+    // forward countered_by penalty
+    if(marks){ h._details.sums.marks += marks * -2; h._details.forward.push({label:'CounteredBy', pts:marks * -2}); }
+
+    // comfort
+    const comfort = Number(h.comfort || 0);
+    if(comfort){ h._details.sums.comfort += comfort; h._details.forward.push({label:'Comfort', pts:comfort}); }
+
+    // auto RoleFit
+    let rf = false;
+    const hr = norm(h.role);
+    if(hr==='tank' || hr==='support' || extraRoamers.includes(norm(h.name))) rf = true;
+    if(mapMatch) rf = true;
+    if(hr==='support' && hasSupportAlly) rf = false;
+    if(hr==='tank' && tankCountAlly >= 2) rf = false;
+    h.roleFit = rf;
+    if(!rf){ h._details.sums.roleFit += -3; h._details.forward.push({label:'RoleFit', pts:-3}); }
+
+    // sum forward to total
+    h.total = h._details.sums.map + h._details.sums.compat + h._details.sums.uncompat + h._details.sums.counters + h._details.sums.marks + h._details.sums.comfort + h._details.sums.roleFit;
+    h._details.total = h.total;
+  });
+
+  // REVERSE pass
+  enemyList.forEach(en => {
+    const enHero = nameMap[norm(en)];
+    if(!enHero) return;
+    // enHero.counters -> heroes that EN counters => they get -2
+    (enHero.counters||[]).forEach(targetName => {
+      const target = nameMap[norm(targetName)];
+      if(!target) return;
+      if(target.disabled) return;
+      target._details.reverse = target._details.reverse || [];
+      target._details.reverse.push({label:'Rev Counter', pts:-2});
+      target.total += -2;
+      target._details.total = target.total;
+    });
+    // enHero.countered_by -> heroes that counter EN => they get +2
+    (enHero.countered_by||[]).forEach(counterName => {
+      const target = nameMap[norm(counterName)];
+      if(!target) return;
+      if(target.disabled) return;
+      target._details.reverse = target._details.reverse || [];
+      target._details.reverse.push({label:'Rev Countered-by', pts:+2});
+      target.total += +2;
+      target._details.total = target.total;
+    });
+  });
+
+  // Allies reverse
+  allyList.forEach(al => {
+    const alHero = nameMap[norm(al)];
+    if(!alHero) return;
+    const pc = parseCompatField(alHero.compatible);
+    (pc.compat||[]).forEach(cname => {
+      const target = nameMap[norm(cname)];
+      if(!target) return;
+      if(target.disabled) return;
+      target._details.reverse = target._details.reverse || [];
+      target._details.reverse.push({label:'Rev Compat', pts:+1});
+      target.total += +1;
+      target._details.total = target.total;
+    });
+    (pc.uncompat||[]).forEach(cname => {
+      const target = nameMap[norm(cname)];
+      if(!target) return;
+      if(target.disabled) return;
+      target._details.reverse = target._details.reverse || [];
+      target._details.reverse.push({label:'Rev Uncompat', pts:-2});
+      target.total += -2;
+      target._details.total = target.total;
+    });
+  });
+
+  // baseline for recommendation (meta roamers)
+  const metaRoam = heroes.filter(h=> !h.disabled && isRoamerHero(h) && norm(h.group)==='meta');
+  const baseline = metaRoam.length ? Math.max(...metaRoam.map(h=>h.total)) : (heroes.filter(h=>!h.disabled && isRoamerHero(h)).length ? Math.max(...heroes.filter(h=>!h.disabled && isRoamerHero(h)).map(h=>h.total)) : -9999);
+  return {baseline};
+}
+
+// decision logic: picks from roamer-eligible heroes only
+function decidePick(){
+  computeTotals();
+  const pool = heroes.filter(h=> !h.disabled && isRoamerHero(h));
+  if(pool.length===0) return {pickIdx:-1, reason:'No eligible roamer heroes.'};
+  const sorted = pool.slice().sort((a,b)=> b.total - a.total);
+  const top = sorted[0];
+  const topMetaList = heroes.filter(h=> !h.disabled && isRoamerHero(h) && norm(h.group)==='meta');
+  const topMeta = topMetaList.length ? topMetaList.reduce((a,b)=> a.total>b.total? a : b, sorted[0]) : top;
+  const group = norm(top.group||'');
+  if(group==='meta') return {pickIdx: heroes.indexOf(top), reason:`Top hero is Meta (${top.name} ${top.total}).`};
+  if(group==='situational'){ if(top.total >= (topMeta.total + 2)) return {pickIdx: heroes.indexOf(top), reason:`Situational ${top.name} >= top Meta +2 (${top.total} >= ${topMeta.total + 2}).`}; else return {pickIdx: heroes.indexOf(topMeta), reason:`Situational ${top.name} did NOT exceed top Meta +2 → pick ${topMeta.name}.`}; }
+  if(group==='playable'){ if(top.total >= (topMeta.total + 3)) return {pickIdx: heroes.indexOf(top), reason:`Playable ${top.name} >= top Meta +3 (${top.total} >= ${topMeta.total + 3}).`}; else return {pickIdx: heroes.indexOf(topMeta), reason:`Playable ${top.name} did NOT exceed top Meta +3 → pick ${topMeta.name}.`}; }
+  return {pickIdx: heroes.indexOf(top), reason:'Fallback pick.'};
+}
+
+// ---------- UI ----------
+const roleTabsEl = document.getElementById('roleTabs');
+ROLE_TABS.forEach(tabName => {
+  const btn = document.createElement('button');
+  btn.className = 'tab' + (tabName==='Roamer' ? ' roamer' : '') + (tabName===activeTab ? ' active' : '');
+  btn.textContent = tabName;
+  btn.onclick = () => { activeTab = tabName; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); render(); };
+  roleTabsEl.appendChild(btn);
+});
+
+const heroesTable = document.getElementById('heroesTable');
+const tallyList = document.getElementById('tallyList');
+const recommendationBox = document.getElementById('recommendation');
+
+function roleFilter(h){
+  if(activeTab === 'All') return true;
+  if(activeTab === 'Roamer') return isRoamerHero(h);
+  return norm(h.role) === norm(activeTab);
+}
+
+function render(){
+  const filterText = (document.getElementById('filter').value||'').trim().toLowerCase();
+  const dec = computeTotals();
+
+  // left table
+  heroesTable.innerHTML = '';
+  const visible = heroes.filter(h => roleFilter(h) && (filterText === '' || norm(h.name).includes(filterText)));
+  visible.forEach(h => {
+    const idx = heroes.indexOf(h);
+    const tr = document.createElement('tr');
+    if(h.disabled) tr.classList.add('removed');
+
+    const maps = (h.maps||[]).join(', ');
+    const countered = (h.countered_by||[]).join(', ');
+    const compatRaw = Array.isArray(h.compatible) ? h.compatible.join(', ') : (h.compatible||'');
+    const counters = (h.counters||[]).join(', ');
+
+    tr.innerHTML = `
+      <td><input data-idx="${idx}" data-key="name" value="${escapeHtml(h.name)}" style="width:120px"></td>
+      <td><input data-idx="${idx}" data-key="role" value="${escapeHtml(h.role)}" style="width:80px"></td>
+      <td>
+        <select data-idx="${idx}" data-key="group">
+          <option ${h.group==='Meta'?'selected':''}>Meta</option>
+          <option ${h.group==='Situational'?'selected':''}>Situational</option>
+          <option ${h.group==='Playable'?'selected':''}>Playable</option>
+          <option ${h.group==='Unknown'?'selected':''}>Unknown</option>
+        </select>
+      </td>
+      <td><input data-idx="${idx}" data-key="maps" value="${escapeHtml(maps)}" style="width:120px"></td>
+      <td><input data-idx="${idx}" data-key="countered_by" value="${escapeHtml(countered)}" style="width:120px"></td>
+      <td><input data-idx="${idx}" data-key="compatible" value="${escapeHtml(compatRaw)}" style="width:140px"></td>
+      <td><input data-idx="${idx}" data-key="counters" value="${escapeHtml(counters)}" style="width:120px"></td>
+      <td>
+        <select data-idx="${idx}" data-key="comfort">
+          <option value="1" ${h.comfort==1?'selected':''}>1</option>
+          <option value="2" ${h.comfort==2?'selected':''}>2</option>
+          <option value="3" ${h.comfort==3?'selected':''}>3</option>
+        </select>
+      </td>
+      <td><input type="number" min="0" data-idx="${idx}" data-key="marks" value="${h.marks||0}" style="width:66px"></td>
+      <td><strong>${h.disabled? 'REMOVED' : (typeof h.total==='number' ? h.total : '0')}</strong></td>
+      <td>
+        <div style="display:flex; gap:6px;">
+          <button data-action="dup" data-idx="${idx}" class="ghost">⧉</button>
+          <button data-action="rm" data-idx="${idx}" class="ghost">✖</button>
+        </div>
+      </td>
+    `;
+    heroesTable.appendChild(tr);
+  });
+
+  // attach listeners in table
+  heroesTable.querySelectorAll('input,select,button').forEach(el=>{
+    const idx = el.dataset.idx; if(typeof idx === 'undefined') return;
+    const key = el.dataset.key;
+    if(el.tagName === 'INPUT' && el.type === 'text'){
+      el.onblur = e => {
+        const val = e.target.value;
+        if(key === 'name') heroes[idx].name = val;
+        else heroes[idx][key] = val.split(',').map(s=>s.trim()).filter(Boolean);
+        render();
+      };
+    } else if(el.tagName === 'SELECT'){
+      el.onchange = e => {
+        const val = e.target.value;
+        if(key === 'group') heroes[idx].group = val;
+        else if(key === 'comfort') heroes[idx].comfort = Number(val);
+        render();
+      };
+    } else if(el.tagName === 'INPUT' && el.type === 'number'){
+      el.onchange = e => { heroes[idx][key] = Number(e.target.value); render(); };
+    } else if(el.tagName === 'BUTTON'){
+      el.onclick = e => {
+        const act = e.target.dataset.action;
+        const i = Number(e.target.dataset.idx);
+        if(act === 'rm'){ heroes.splice(i,1); render(); }
+        if(act === 'dup'){ heroes.splice(i+1,0, JSON.parse(JSON.stringify(heroes[i]))); render(); }
+      };
+    }
+  });
+
+  // right tally list
+  tallyList.innerHTML = '';
+  const visibleForTally = heroes.filter(h => roleFilter(h)).sort((a,b)=> (b.total||0) - (a.total||0));
+  visibleForTally.forEach(h=>{
+    const bd = h._details || {forward:[], reverse:[], total:h.total||0};
+    const div = document.createElement('div'); div.style.marginBottom='10px'; div.style.borderBottom='1px solid rgba(255,255,255,0.03)';
+    const parsed = parseCompatField(h.compatible);
+    const cp = parsed.compat.map(x=>`<span style="color:var(--good);font-weight:600">${escapeHtml(x)}</span>`).join(', ');
+    const up = parsed.uncompat.map(x=>`<span style="color:#ffb3b3;font-weight:600">-${escapeHtml(x)}</span>`).join(', ');
+    const compatDisplay = (cp? cp : '') + (cp && up ? ', ' : '') + (up? up : '');
+
+    const forwardLines = (bd.forward||[]).map(it=> `<div class="detail-line">${escapeHtml(it.label)} <span style="float:right; font-weight:700">${it.pts>=0? '+'+it.pts: it.pts}</span></div>`).join('');
+    const reverseLines = (bd.reverse||[]).map(it=> `<div class="detail-line"><span class="reverse-tag">${escapeHtml(it.label)}</span> <span style="float:right; font-weight:700">${it.pts>=0? '+'+it.pts: it.pts}</span></div>`).join('');
+    const showDetails = document.getElementById('debugToggle').checked;
+
+    div.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div style="font-weight:700" class="${bannedList.includes(h.name)?'banned':''}">${escapeHtml(h.name)} <span class="small muted">(${h.role})</span>${bannedList.find(b=>norm(b)===norm(h.name))?' <span class="banned">(BANNED)</span>':''}</div>
+        <div style="text-align:right">
+          <div class="${h.disabled? 'score-neg':'score-pos'}" style="font-size:18px; font-weight:800">${h.disabled? 'REMOVED' : (typeof h.total==='number'?h.total:'0')}</div>
+          <div class="small muted">${h.group}</div>
+        </div>
+      </div>
+      <div class="tally">
+        ${ showDetails ? forwardLines : '' }
+        ${ showDetails ? `<div class="detail-line" style="border-top:1px dashed rgba(255,255,255,0.03); margin-top:6px; padding-top:6px"><strong class="small muted">Reverse</strong></div>` : '' }
+        ${ showDetails ? reverseLines : '' }
+        <div class="tally-row"><div class="k">Compatible (list)</div><div class="v" style="font-weight:600">${compatDisplay || '-'}</div></div>
+        <div class="tally-row"><div class="k">Countered by (list)</div><div class="v">${(h.countered_by||[]).join(', ') || '-'}</div></div>
+        <div class="tally-row"><div class="k">Counters (list)</div><div class="v">${(h.counters||[]).join(', ') || '-'}</div></div>
+        <div class="tally-row"><div class="k">Comfort</div><div class="v">+${h.comfort||0}</div></div>
+        <div class="tally-row"><div class="k">RoleFit (auto)</div><div class="v">${h.roleFit? '<span style="color:var(--good)">Yes</span>' : '<span style="color:var(--bad)">No (-3)</span>'}</div></div>
+        <div class="total-hero"><div>Total Points Tallied</div><div>${h.disabled? 'REMOVED' : (h._details && h._details.total>=0 ? '<span class="score-pos">+'+h._details.total+'</span>' : '<span class="score-neg">'+(h._details? h._details.total : h.total)+'</span>')}</div></div>
+      </div>
+    `;
+    tallyList.appendChild(div);
+  });
+
+  // recommendation (roamer-only). show pick and glow gold if Roamer tab active
+  const pickDecision = decidePick();
+  const recEl = recommendationBox;
+  if(pickDecision.pickIdx === -1) {
+    recEl.innerHTML = `<div class="rec-box">No recommended pick — ${pickDecision.reason}</div>`;
+    recEl.classList.remove('glow');
+  } else {
+    const pick = heroes[pickDecision.pickIdx];
+    const isRoamerTab = (activeTab === 'Roamer');
+    const glowClass = isRoamerTab ? 'rec-box glow' : 'rec-box';
+    recEl.innerHTML = `<div class="${glowClass}" style="${isRoamerTab ? 'border-color: rgba(255,215,0,0.12);' : ''}"><strong style="color:var(--accent)">${pick.name}</strong> — recommended. ${pickDecision.reason}</div>`;
+  }
+}
+
+// escape helper
+function escapeHtml(s){ return String(s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+
+// live inputs
+const allyInput = document.getElementById('allyPicks');
+const enemyInput = document.getElementById('enemyPicks');
+allyInput.oninput = () => { allyList = parseList(allyInput.value); render(); };
+enemyInput.oninput = () => { enemyList = parseList(enemyInput.value); render(); };
+// NEW: banned heroes live list
+let bannedList = [];
+const bannedInput = document.getElementById('bannedPicks');
+bannedInput.oninput = () => { bannedList = parseList(bannedInput.value); render(); };
+
+
+// map toggles & other UI
+['zone_grass','zone_river','zone_walls','zone_cloud'].forEach(id => document.getElementById(id).onchange = render);
+document.getElementById('filter').oninput = render;
+document.getElementById('debugToggle').onchange = render;
+document.getElementById('clearInputs').onclick = () => {
+  allyInput.value = '';
+  enemyInput.value = '';
+  bannedInput.value = '';
+  allyList = [];
+  enemyList = [];
+  bannedList = [];
+  render();
+};
+
+
+// save/load/export
+document.getElementById('saveLocal').onclick = () => {
+  localStorage.setItem('mlbb_v6', JSON.stringify({heroes, allyList, enemyList}));
+  alert('Saved.');
+};
+document.getElementById('loadLocal').onclick = () => {
+  const raw = localStorage.getItem('mlbb_v6');
+  if(!raw){ alert('No saved data'); return; }
+  const obj = JSON.parse(raw);
+  heroes = obj.heroes || heroes; allyList = obj.allyList || []; enemyList = obj.enemyList || [];
+  allyInput.value = allyList.join(', '); enemyInput.value = enemyList.join(', ');
+  render();
+};
+document.getElementById('exportCsv').onclick = () => {
+  const rows = [['Name','Role','Group','Maps','CounteredBy','Compatible','Counters','Marks','Comfort','RoleFit','Total','Disabled']];
+  heroes.forEach(h=> rows.push([h.name, h.role, h.group, (h.maps||[]).join(';'), (h.countered_by||[]).join(';'), (Array.isArray(h.compatible)?h.compatible.join(';'):(h.compatible||'')), (h.counters||[]).join(';'), h.marks||0, h.comfort, h.roleFit, h.total, !!h.disabled]));
+  const csv = rows.map(r=> r.map(c=> `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='mlbb_v6_export.csv'; a.click();
+  URL.revokeObjectURL(url);
+};
+
+// --- Optional: also allow importing CSV exports directly ---
+document.getElementById('importBackup').onchange = e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const text = ev.target.result.trim();
+    try {
+      // Try JSON first
+      const data = JSON.parse(text);
+      heroes = data.heroes || heroes;
+      allyList = data.allyList || [];
+      enemyList = data.enemyList || [];
+      bannedList = data.bannedList || [];
+      allyInput.value = allyList.join(', ');
+      enemyInput.value = enemyList.join(', ');
+      bannedInput.value = bannedList.join(', ');
+      render();
+      alert('Backup imported successfully!');
+    } catch {
+      // If not JSON, try parsing CSV
+      const lines = text.split(/\r?\n/).filter(l => l.trim());
+      const headers = lines.shift().split(',').map(h=>h.replace(/"/g,'').trim());
+      heroes = lines.map(line => {
+        const cols = line.split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/).map(c=>c.replace(/^"|"$/g,''));
+        const obj = {};
+        headers.forEach((h,i)=> obj[h.trim()] = cols[i]);
+        obj.name = obj.Name || '';  // ✅ Ensures hero name is restored properly
+        obj.maps = (obj.Maps||'').split(';').filter(Boolean);
+        obj.countered_by = (obj.CounteredBy||'').split(';').filter(Boolean);
+        obj.compatible = (obj.Compatible||'').split(';').filter(Boolean);
+        obj.counters = (obj.Counters||'').split(';').filter(Boolean);
+        obj.role = obj.Role || '';
+        obj.group = obj.Group || 'Unknown';
+        obj.comfort = Number(obj.Comfort||0);
+        obj.marks = Number(obj.Marks||0);
+        return obj;
+      });
+      render();
+      alert('CSV imported successfully!');
+    }
+  };
+  reader.readAsText(file);
+};
+
+// initial render
+render();
+</script>
+</body>
+</html>
+
+
+
+
+
