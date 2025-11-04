@@ -124,7 +124,10 @@
           <div style="display:flex; justify-content:space-between; align-items:center;">
             <div>
               <h3 style="margin:0">Tallies — role view</h3>
-              <div class="small muted">Tally list shows heroes for the active tab (or all for 'All').</div>
+<div class="small muted">
+  Tally list shows heroes for the active tab (or all for 'All').
+  <span id="modeLabel" style="margin-left:6px; color:var(--gold); font-weight:600"></span>
+</div>
             </div>
             <div><button id="clearInputs" class="ghost">Clear Ally/Enemy</button></div>
           </div>
@@ -255,15 +258,51 @@ if (bannedList.find(b => norm(b) === norm(h.name))) {
     const comfort = Number(h.comfort || 0);
     if(comfort){ h._details.sums.comfort += comfort; h._details.forward.push({label:'Comfort', pts:comfort}); }
 
-    // auto RoleFit
-    let rf = false;
-    const hr = norm(h.role);
-    if(hr==='tank' || hr==='support' || extraRoamers.includes(norm(h.name))) rf = true;
-    if(mapMatch) rf = true;
-    if(hr==='support' && hasSupportAlly) rf = false;
-    if(hr==='tank' && tankCountAlly >= 2) rf = false;
-    h.roleFit = rf;
-    if(!rf){ h._details.sums.roleFit += -3; h._details.forward.push({label:'RoleFit', pts:-3}); }
+    // auto RoleFit (Dynamic: switches between Roamer and Fighter logic)
+let rf = false;
+const hr = norm(h.role);
+const isFighterMode = (activeTab === 'Fighter');
+
+// FIGHTER MODE LOGIC
+if (isFighterMode) {
+  // Fighters and Assassins are favored
+  if (hr === 'fighter' || hr === 'assassin') rf = true;
+
+  // Tanks manually tagged as Fighter count as fighter-fit
+  if (hr === 'tank' && (h.group.toLowerCase() === 'situational' || h.group.toLowerCase() === 'playable')) rf = true;
+
+  // Map synergy bonus
+  if (mapMatch) rf = true;
+
+  // Too many Fighters in ally team? penalize
+  const fighterCountAlly = allyRoles.filter(r => r === 'fighter').length;
+  if (hr === 'fighter' && fighterCountAlly >= 2) rf = false;
+
+  // Supports are not fighter-fit
+  if (hr === 'support') rf = false;
+
+// ROAMER MODE LOGIC
+} else {
+  if (hr === 'tank' || hr === 'support' || extraRoamers.includes(norm(h.name))) rf = true;
+  if (mapMatch) rf = true;
+  if (hr === 'support' && hasSupportAlly) rf = false;
+  if (hr === 'tank' && tankCountAlly >= 2) rf = false;
+}
+
+// Assign and apply penalty if not fit
+h.roleFit = rf;
+if (!rf) {
+  h._details.sums.roleFit += -3;
+  h._details.forward.push({ label: 'RoleFit', pts: -3 });
+}
+
+
+h.roleFit = rf;
+if (!rf) {
+  h._details.sums.roleFit += -3;
+  h._details.forward.push({ label: 'RoleFit', pts: -3 });
+}
+
 
     // sum forward to total
     h.total = h._details.sums.map + h._details.sums.compat + h._details.sums.uncompat + h._details.sums.counters + h._details.sums.marks + h._details.sums.comfort + h._details.sums.roleFit;
@@ -366,6 +405,12 @@ function roleFilter(h){
 function render(){
   const filterText = (document.getElementById('filter').value||'').trim().toLowerCase();
   const dec = computeTotals();
+  
+    // Update mode label (top right)
+  const modeLabel = document.getElementById('modeLabel');
+  if (activeTab === 'Fighter') modeLabel.textContent = '(Fighter Mode Active)';
+  else if (activeTab === 'Roamer') modeLabel.textContent = '(Roamer Mode Active)';
+  else modeLabel.textContent = '';
 
   // left table
   heroesTable.innerHTML = '';
@@ -490,9 +535,9 @@ function render(){
     recEl.classList.remove('glow');
   } else {
     const pick = heroes[pickDecision.pickIdx];
-    const isRoamerTab = (activeTab === 'Fighter');
-    const glowClass = isRoamerTab ? 'rec-box glow' : 'rec-box';
-    recEl.innerHTML = `<div class="${glowClass}" style="${isRoamerTab ? 'border-color: rgba(255,215,0,0.12);' : ''}"><strong style="color:var(--accent)">${pick.name}</strong> — recommended. ${pickDecision.reason}</div>`;
+    const isFighterTab = (activeTab === 'Fighter');
+    const glowClass = isFighterTab ? 'rec-box glow' : 'rec-box';
+    recEl.innerHTML = `<div class="${glowClass}" style="${isFighterTab ? 'border-color: rgba(255,215,0,0.12);' : ''}"><strong style="color:var(--accent)">${pick.name}</strong> — recommended. ${pickDecision.reason}</div>`;
   }
 }
 
@@ -598,6 +643,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
