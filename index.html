@@ -347,7 +347,7 @@ function decidePick(){
 const roleTabsEl = document.getElementById('roleTabs');
 ROLE_TABS.forEach(tabName => {
   const btn = document.createElement('button');
-  btn.className = 'tab' + (tabName==='Roamer' ? ' roamer' : '') + (tabName===activeTab ? ' active' : '');
+  btn.className = 'tab' + (tabName==='Fighter' ? ' roamer' : '') + (tabName===activeTab ? ' active' : '');
   btn.textContent = tabName;
   btn.onclick = () => { activeTab = tabName; document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active')); btn.classList.add('active'); render(); };
   roleTabsEl.appendChild(btn);
@@ -359,7 +359,7 @@ const recommendationBox = document.getElementById('recommendation');
 
 function roleFilter(h){
   if(activeTab === 'All') return true;
-  if(activeTab === 'Roamer') return isRoamerHero(h);
+  if(activeTab === 'Fighter') return isRoamerHero(h);
   return norm(h.role) === norm(activeTab);
 }
 
@@ -490,7 +490,7 @@ function render(){
     recEl.classList.remove('glow');
   } else {
     const pick = heroes[pickDecision.pickIdx];
-    const isRoamerTab = (activeTab === 'Roamer');
+    const isRoamerTab = (activeTab === 'Fighter');
     const glowClass = isRoamerTab ? 'rec-box glow' : 'rec-box';
     recEl.innerHTML = `<div class="${glowClass}" style="${isRoamerTab ? 'border-color: rgba(255,215,0,0.12);' : ''}"><strong style="color:var(--accent)">${pick.name}</strong> — recommended. ${pickDecision.reason}</div>`;
   }
@@ -598,6 +598,7 @@ render();
 </script>
 </body>
 </html>
+
 
 
 
